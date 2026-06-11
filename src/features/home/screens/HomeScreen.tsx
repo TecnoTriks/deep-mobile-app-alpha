@@ -204,7 +204,7 @@ export function HomeScreen() {
       <Animated.View className="mx-4 -mt-3 flex-row gap-2.5" style={stagger.style(1)}>
         <StatChip accent label="Registros" ringColor="#fafafa" value={data.recordsCount} />
         <StatChip label="Disponíveis" value={data.availableCount} />
-        <StatChip label="Aguardando backoffice" value={data.backofficeReturnCount} />
+        <StatChip label="Aguardando backoffice" value={data.waitingBackofficeCount} />
       </Animated.View>
 
       {/* ── 3. Botão principal ──────────────────────────────────────────── */}

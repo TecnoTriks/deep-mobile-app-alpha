@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Deep - Agente",
+    "name": "Deep Agente Alpha",
     "slug": "new-mobile-app",
     "version": "1.0.0",
     "platforms": [
@@ -13,7 +13,7 @@
     "backgroundColor": "#fff6ed",
     "android": {
       "package": "com.triks.deepagente",
-      "versionCode": 2,
+      "versionCode": 4,
       "adaptiveIcon": {
         "backgroundColor": "#fff6ed",
         "foregroundImage": "./assets/android-icon-foreground.png",

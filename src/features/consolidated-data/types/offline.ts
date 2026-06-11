@@ -96,7 +96,10 @@ export type HomeDashboardData = {
   formBaseDados: boolean;
   recordsCount: number;
   lastSyncAt: string | null;
+  /** Registros reprovados/retornados pelo backoffice (tabela offline_backoffice) */
   backofficeReturnCount: number;
+  /** Registros aguardando processamento do backoffice (backoffice_status_guid IS NOT NULL) */
+  waitingBackofficeCount: number;
   availableCount: number;
   situacaoDeCampoCount: number;
   pendingSyncCount: number;

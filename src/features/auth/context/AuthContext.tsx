@@ -19,10 +19,11 @@ type AuthContextValue = {
   session: AuthSession | null;
   cancelReauth: () => void;
   clearForceFullRefresh: () => void;
+  clearOfflineReady: () => void;
   dismissDataRefreshPrompt: () => void;
   markOfflineReady: () => void;
   requestFullRefresh: () => void;
-  refreshSession: (agent: import('../types/auth').AuthenticatedAgent) => Promise<void>;
+  refreshSession: (update: Partial<import('../types/auth').AuthenticatedAgent>) => Promise<void>;
   signIn: (session: AuthSession) => Promise<void>;
   signOut: () => Promise<void>;
   submitReauth: (senha: string) => Promise<void>;
@@ -118,7 +119,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setReauthError(null);
 
     try {
-      const nextSession = await login({ cpf: currentSession.agent.cpf, senha });
+      const freshLogin = await login({ cpf: currentSession.agent.cpf, senha });
+      // Only update the token — preserve the current agent's team/group data.
+      // login() returns grupo_equipe_guid: null (endpoint doesn't return it),
+      // so replacing the full agent would send the user back to NoGroup.
+      const nextSession: AuthSession = { ...currentSession, token: freshLogin.token };
       await saveSession(database, nextSession);
       setApiAccessToken(nextSession.token);
       setSession(nextSession);
@@ -149,9 +154,26 @@ export function AuthProvider({ children }: PropsWithChildren) {
       session,
       cancelReauth,
       clearForceFullRefresh: () => setForceFullRefresh(false),
+      clearOfflineReady: () => setIsOfflineReady(false),
       dismissDataRefreshPrompt: () => setShouldPromptDataRefresh(false),
       markOfflineReady: () => setIsOfflineReady(true),
       requestFullRefresh: () => setForceFullRefresh(true),
+      refreshSession: async (update) => {
+        const current = sessionRef.current;
+        if (!current) return;
+        // Merge: only overwrite fields that are explicitly provided (not undefined).
+        // The profile endpoint returns subset fields (equipe, group, etc.) and omits
+        // invariants like tipo/tipo_agente/cpf — those must come from the base session.
+        const mergedAgent = { ...current.agent };
+        for (const [k, v] of Object.entries(update) as [keyof typeof update, unknown][]) {
+          if (v !== undefined) {
+            (mergedAgent as Record<string, unknown>)[k] = v;
+          }
+        }
+        const updated: AuthSession = { ...current, agent: mergedAgent };
+        await saveSession(database, updated);
+        setSession(updated);
+      },
       signIn: async (nextSession) => {
         await saveSession(database, nextSession);
         setApiAccessToken(nextSession.token);

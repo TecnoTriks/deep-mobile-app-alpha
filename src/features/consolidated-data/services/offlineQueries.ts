@@ -269,15 +269,20 @@ export async function getHomeDashboardData(database: SQLiteDatabase, agentGuid: 
   );
   if (!profile) return null;
 
-  const [form, syncState, teamRow, backofficeReturn, available, situacaoCampo, pendingSync] = await Promise.all([
+  const [form, syncState, teamRow, backofficeReturn, waitingBackoffice, available, situacaoCampo, pendingSync] = await Promise.all([
     database.getFirstAsync<{ name: string }>('SELECT name FROM offline_forms ORDER BY is_main DESC, rowid LIMIT 1'),
     database.getFirstAsync<{ records_count: number; updated_at: string }>(
       'SELECT records_count, updated_at FROM offline_sync_state WHERE agent_guid = ?',
       agentGuid,
     ),
     database.getFirstAsync<{ raw_json: string }>('SELECT raw_json FROM offline_teams LIMIT 1'),
+    // Registros reprovados/retornados pelo backoffice (tabela offline_backoffice)
     database.getFirstAsync<{ c: number }>(
       'SELECT COUNT(DISTINCT record_guid) as c FROM offline_backoffice',
+    ),
+    // Registros que o agente já preencheu e aguardam processamento do backoffice
+    database.getFirstAsync<{ c: number }>(
+      'SELECT COUNT(*) as c FROM offline_records WHERE backoffice_status_guid IS NOT NULL',
     ),
     database.getFirstAsync<{ c: number }>(
       `SELECT COUNT(*) as c FROM offline_records
@@ -306,6 +311,7 @@ export async function getHomeDashboardData(database: SQLiteDatabase, agentGuid: 
   return {
     availableCount: available?.c ?? 0,
     backofficeReturnCount: backofficeReturn?.c ?? 0,
+    waitingBackofficeCount: waitingBackoffice?.c ?? 0,
     formBaseDados,
     formName: form?.name ?? '—',
     groupName: profile.group_name ?? '—',

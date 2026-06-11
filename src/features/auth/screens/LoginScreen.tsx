@@ -12,17 +12,15 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AccessBlockedModal } from '../components/AccessBlockedModal';
 import { PasswordDefinedModal } from '../components/PasswordDefinedModal';
 import { PasswordStrengthMeter } from '../components/PasswordStrengthMeter';
 import { type AuthStep, StepIndicator } from '../components/StepIndicator';
 import { useAuth } from '../context/AuthContext';
-import { login, primeiroAcesso, verificarAcesso } from '../services/authService';
+import { getAgentProfile, login, primeiroAcesso, verificarAcesso } from '../services/authService';
+import { setApiAccessToken } from '../../../shared/api/apiClient';
 import { useAuthLayout } from '../utils/useAuthLayout';
 import { getErrorMessage } from '../../../shared/utils/getErrorMessage';
 import { formatCpf } from '../../../shared/utils/formatCpf';
-
-const ALLOWED_AGENT_TYPE = '26e04207-d0f0-401c-a65d-1750cca6df12';
 
 export function LoginScreen() {
   const { contentWidth, insets } = useAuthLayout();
@@ -33,7 +31,6 @@ export function LoginScreen() {
   const [agentGuid, setAgentGuid] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isBlockedModalVisible, setIsBlockedModalVisible] = useState(false);
   const [isPasswordDefinedModalVisible, setIsPasswordDefinedModalVisible] = useState(false);
   const fieldOpacity = useRef(new Animated.Value(1)).current;
   const fieldOffset = useRef(new Animated.Value(0)).current;
@@ -68,11 +65,6 @@ export function LoginScreen() {
 
     try {
       const access = await verificarAcesso(cpf);
-
-      if (access.tipo_agente !== ALLOWED_AGENT_TYPE) {
-        setIsBlockedModalVisible(true);
-        return;
-      }
 
       setAgentGuid(access.guid);
       setPassword('');
@@ -109,7 +101,23 @@ export function LoginScreen() {
         return;
       }
 
-      await signIn(await login({ cpf, senha: password }));
+      const session = await login({ cpf, senha: password });
+
+      // Login returns equipe but NOT grupo. If the user has a team, fetch
+      // group membership before signIn so AppNavigator has complete data.
+      // Token must be set first — getAgentProfile is an authenticated endpoint.
+      const hasTeam = session.agent.equipe_guid != null || session.agent.equipe_id != null;
+      if (hasTeam) {
+        setApiAccessToken(session.token);
+        try {
+          const profile = await getAgentProfile(session.agent.guid);
+          Object.assign(session.agent, profile);
+        } catch (profileErr) {
+          setApiAccessToken(null);
+          throw profileErr;
+        }
+      }
+      await signIn(session);
     } catch (error) {
       setErrorMessage(
         getErrorMessage(
@@ -144,14 +152,6 @@ export function LoginScreen() {
         className="flex-1"
         keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
       >
-        <AccessBlockedModal
-          onClose={() => {
-            setIsBlockedModalVisible(false);
-            resetFlow();
-          }}
-          visible={isBlockedModalVisible}
-        />
-
         <PasswordDefinedModal
           onConfirm={() => {
             setIsPasswordDefinedModalVisible(false);

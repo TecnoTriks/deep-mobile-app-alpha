@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-const DATABASE_VERSION = 11;
+const DATABASE_VERSION = 12;
 
 async function ensureRecordsSearchTriggers(database: SQLiteDatabase) {
   await database.execAsync(`
@@ -290,6 +290,13 @@ export async function migrateDatabase(database: SQLiteDatabase) {
   if (currentVersion < 11) {
     await database.execAsync(`
       UPDATE offline_records SET base_dados_guid = guid WHERE base_dados_guid IS NULL;
+    `);
+  }
+
+  if (currentVersion < 12) {
+    await database.execAsync(`
+      ALTER TABLE auth_session ADD COLUMN equipe_guid TEXT;
+      ALTER TABLE auth_session ADD COLUMN grupo_equipe_guid TEXT;
     `);
   }
 

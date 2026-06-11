@@ -2,7 +2,9 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { ReauthModal } from '../features/auth/components/ReauthModal';
 import { useAuth } from '../features/auth/context/AuthContext';
+import { JoinTeamScreen } from '../features/auth/screens/JoinTeamScreen';
 import { LoginScreen } from '../features/auth/screens/LoginScreen';
+import { NoGroupScreen } from '../features/auth/screens/NoGroupScreen';
 import { HomeScreen } from '../features/home/screens/HomeScreen';
 import { OfflinePreparationScreen } from '../features/consolidated-data/screens/OfflinePreparationScreen';
 import { AlertModal } from '../shared/components/AlertModal';
@@ -11,7 +13,9 @@ import { LoadingScreen } from '../shared/components/LoadingScreen';
 
 export type RootStackParamList = {
   Home: undefined;
+  JoinTeam: undefined;
   Login: undefined;
+  NoGroup: undefined;
   Preparation: undefined;
 };
 
@@ -34,10 +38,23 @@ export function AppNavigator() {
     return <LoadingScreen />;
   }
 
+  // != null (loose) catches both null and undefined — a field that is either
+  // means the API confirmed no value. A present string means the user has it.
+  const hasTeam = !session
+    || session.agent.equipe_guid != null
+    || session.agent.equipe_id != null;
+  const hasGroup = !session || session.agent.grupo_equipe_guid != null;
+
   return (
     <>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {session && (!isOfflineReady || forceFullRefresh) ? (
+        {!session ? (
+          <Stack.Screen component={LoginScreen} name="Login" />
+        ) : !hasTeam ? (
+          <Stack.Screen component={JoinTeamScreen} name="JoinTeam" />
+        ) : !hasGroup ? (
+          <Stack.Screen component={NoGroupScreen} name="NoGroup" />
+        ) : !isOfflineReady || forceFullRefresh ? (
           <Stack.Screen name="Preparation">
             {() => (
               <OfflinePreparationScreen
@@ -49,7 +66,7 @@ export function AppNavigator() {
               />
             )}
           </Stack.Screen>
-        ) : session ? (
+        ) : (
           <Stack.Screen name="Home">
             {() => (
               <AuthenticatedLayout>
@@ -57,8 +74,6 @@ export function AppNavigator() {
               </AuthenticatedLayout>
             )}
           </Stack.Screen>
-        ) : (
-          <Stack.Screen component={LoginScreen} name="Login" />
         )}
       </Stack.Navigator>
       <AlertModal
@@ -72,7 +87,7 @@ export function AppNavigator() {
           requestFullRefresh();
         }}
         title="Atualizar dados gerais?"
-        visible={Boolean(session && isOfflineReady && shouldPromptDataRefresh && !forceFullRefresh)}
+        visible={Boolean(session && hasTeam && hasGroup && isOfflineReady && shouldPromptDataRefresh && !forceFullRefresh)}
       />
       <ReauthModal />
     </>

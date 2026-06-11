@@ -215,7 +215,23 @@ export function OfflinePreparationScreen({ forceFullRefresh = false, onAdvance }
   return (
     <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
       <StatusBar style="dark" />
-      <ScrollView contentContainerClassName="flex-grow justify-between px-6 pb-8 pt-6">
+      <ScrollView contentContainerClassName="flex-grow" contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 32 }}>
+
+        {/* Error banner — shown at top so it's immediately visible */}
+        {errorMessage ? (
+          <View className="mb-6 rounded-3xl bg-red-50 p-5">
+            <Text className="text-lg font-semibold text-red-700">Precisamos da sua atenção</Text>
+            <Text className="mt-2 text-sm leading-5 text-red-600">{errorMessage}</Text>
+            <Pressable
+              className="mt-5 min-h-12 items-center justify-center rounded-2xl bg-primary-500 px-4"
+              disabled={isRunning}
+              onPress={runPreparation}
+            >
+              <Text className="font-semibold text-white">Tentar novamente</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
         <View>
           <View className="self-start rounded-full bg-primary-100 px-3 py-2">
             <Text className="text-xs font-semibold uppercase tracking-wider text-primary-700">Primeira preparacao</Text>
@@ -274,25 +290,13 @@ export function OfflinePreparationScreen({ forceFullRefresh = false, onAdvance }
               })}
             </View>
           )}
-        </View>
 
-        {errorMessage ? (
-          <View className="mt-6 rounded-3xl bg-red-50 p-5">
-            <Text className="text-lg font-semibold text-red-700">Precisamos da sua atencao</Text>
-            <Text className="mt-2 text-sm leading-5 text-red-600">{errorMessage}</Text>
-            <Pressable
-              className="mt-5 min-h-12 items-center justify-center rounded-2xl bg-primary-500 px-4"
-              disabled={isRunning}
-              onPress={runPreparation}
-            >
-              <Text className="font-semibold text-white">Tentar novamente</Text>
-            </Pressable>
-          </View>
-        ) : !showSummary ? (
-          <Text className="mt-6 text-center text-xs leading-5 text-zinc-400">
-            Mantenha o aplicativo aberto durante esta primeira preparacao.
-          </Text>
-        ) : null}
+          {!errorMessage ? (
+            <Text className="mt-6 text-center text-xs leading-5 text-zinc-400">
+              Mantenha o aplicativo aberto durante esta primeira preparacao.
+            </Text>
+          ) : null}
+        </View>
      </ScrollView>
     </SafeAreaView>
   );

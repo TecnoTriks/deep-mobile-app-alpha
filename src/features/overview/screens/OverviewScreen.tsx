@@ -1,3 +1,5 @@
+import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Modal, Platform, Pressable, ScrollView, Text, useWindowDimensions, View } from 'react-native';
@@ -20,10 +22,69 @@ export function OverviewScreen() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [pendingDrafts, setPendingDrafts] = useState(0);
 
+  type PermissionKey = 'location' | 'camera' | 'media';
+  type PermissionStatus = { key: PermissionKey; label: string; detail: string; ok: boolean };
+  const [permissions, setPermissions] = useState<PermissionStatus[]>([]);
+
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(24)).current;
 
   const modalWidth = Math.min(width - 48, 420);
+
+  const loadPermissions = useCallback(async () => {
+    // getBackgroundPermissionsAsync can throw on devices where background
+    // location is not available — treat as not granted if it rejects.
+    const [locFg, locBg, camera, media] = await Promise.all([
+      Location.getForegroundPermissionsAsync(),
+      Location.getBackgroundPermissionsAsync().catch(() => ({ granted: false })),
+      ImagePicker.getCameraPermissionsAsync(),
+      ImagePicker.getMediaLibraryPermissionsAsync(),
+    ]);
+
+    const androidAccuracy = (locFg as Location.LocationPermissionResponse).android?.accuracy;
+    const accuracyLabel = androidAccuracy === 'fine' ? 'Alta (GPS)'
+      : androidAccuracy === 'coarse' ? 'Aproximada'
+      : androidAccuracy === 'none' ? 'Desativada'
+      : '—';
+
+    const mediaDetail = media.accessPrivileges === 'all' ? 'Acesso total'
+      : media.accessPrivileges === 'limited' ? 'Acesso parcial'
+      : 'Negado';
+
+    setPermissions([
+      {
+        key: 'location',
+        label: 'Localização',
+        detail: locFg.granted
+          ? `Concedida · Precisão ${accuracyLabel}${locBg.granted ? ' · Segundo plano' : ''}`
+          : 'Toque para conceder',
+        ok: locFg.granted,
+      },
+      {
+        key: 'camera',
+        label: 'Câmera',
+        detail: camera.granted ? 'Concedida' : 'Toque para conceder',
+        ok: camera.granted,
+      },
+      {
+        key: 'media',
+        label: 'Galeria',
+        detail: media.granted ? mediaDetail : 'Toque para conceder',
+        ok: media.granted,
+      },
+    ]);
+  }, []);
+
+  const requestPermission = useCallback(async (key: PermissionKey) => {
+    if (key === 'location') {
+      await Location.requestForegroundPermissionsAsync();
+    } else if (key === 'camera') {
+      await ImagePicker.requestCameraPermissionsAsync();
+    } else if (key === 'media') {
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+    }
+    await loadPermissions();
+  }, [loadPermissions]);
 
   const load = useCallback(async () => {
     if (!session) return;
@@ -35,7 +96,8 @@ export function OverviewScreen() {
     setData(d);
     setPendingDrafts(pending);
     setLoading(false);
-  }, [database, session]);
+    void loadPermissions();
+  }, [database, loadPermissions, session]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -175,6 +237,39 @@ export function OverviewScreen() {
                   </View>
                 );
               })}
+            </View>
+          ) : null}
+
+          {permissions.length > 0 ? (
+            <View className="mb-6 rounded-3xl border border-zinc-200 bg-white p-5">
+              <Text className="mb-3 text-xs font-semibold uppercase tracking-widest text-primary-600">
+                Permissões do aplicativo
+              </Text>
+              {permissions.map((perm, index) => (
+                <Pressable
+                  className={`flex-row items-center rounded-2xl px-4 py-3 ${index < permissions.length - 1 ? 'mb-3' : ''} ${perm.ok ? 'bg-zinc-50' : 'bg-red-50 active:bg-red-100'}`}
+                  disabled={perm.ok}
+                  key={perm.key}
+                  onPress={() => { void requestPermission(perm.key); }}
+                >
+                  <View
+                    className={`mr-3 h-9 w-9 items-center justify-center rounded-full ${perm.ok ? 'bg-green-100' : 'bg-red-100'}`}
+                  >
+                    <Text className={`text-sm font-bold ${perm.ok ? 'text-green-600' : 'text-red-600'}`}>
+                      {perm.ok ? '✓' : '✕'}
+                    </Text>
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-xs text-zinc-400">{perm.label}</Text>
+                    <Text className={`text-sm font-medium ${perm.ok ? 'text-zinc-950' : 'text-red-700'}`}>
+                      {perm.detail}
+                    </Text>
+                  </View>
+                  {!perm.ok ? (
+                    <Text className="ml-2 text-xs font-semibold text-red-500">›</Text>
+                  ) : null}
+                </Pressable>
+              ))}
             </View>
           ) : null}
 
