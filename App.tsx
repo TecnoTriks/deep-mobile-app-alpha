@@ -11,7 +11,9 @@ import { Animated, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider } from './src/features/auth/context/AuthContext';
-import { AppNavigator } from './src/navigation/AppNavigator';
+import { linking } from './src/navigation/linking';
+import { navigationRef } from './src/navigation/navigationRef';
+import { RootNavigator } from './src/navigation/RootNavigator';
 import { migrateDatabase } from './src/shared/database/migrations';
 import { NetworkProvider } from './src/shared/context/NetworkContext';
 import { queryClient } from './src/shared/query/queryClient';
@@ -85,12 +87,16 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <NetworkProvider>
-        <SQLiteProvider databaseName="deep-agente.db" onInit={migrateDatabase}>
+        <SQLiteProvider
+          databaseName="deep-agente.db"
+          onInit={migrateDatabase}
+          options={{ finalizeUnusedStatementsBeforeClosing: false }}
+        >
           <QueryClientProvider client={queryClient}>
             <AuthProvider>
-              <NavigationContainer>
+              <NavigationContainer linking={linking} ref={navigationRef}>
                 <StatusBar style="dark" />
-                <AppNavigator />
+                <RootNavigator />
               </NavigationContainer>
               {!splashDone && <CustomSplash onDone={handleSplashDone} />}
             </AuthProvider>

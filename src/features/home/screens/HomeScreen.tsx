@@ -6,7 +6,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '../../auth/context/AuthContext';
 import { getHomeDashboardData } from '../../consolidated-data/services/offlineQueries';
-import { useAppNav } from '../../../shared/context/AppNavContext';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+
+import type { AppStackParamList } from '../../../navigation/types';
 
 // ─── animation helper ─────────────────────────────────────────────────────────
 
@@ -94,7 +97,7 @@ function MetricCard({ label, value, color }: { label: string; value: number; col
 export function HomeScreen() {
   const database = useSQLiteContext();
   const { session } = useAuth();
-  const { navigateTo } = useAppNav();
+  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const insets = useSafeAreaInsets();
 
   const agentGuid = session?.agent.guid;
@@ -209,7 +212,7 @@ export function HomeScreen() {
       <Animated.View className="mx-4 mt-5" style={stagger.style(2)}>
         <Pressable
           className="min-h-[68px] flex-row items-center justify-between rounded-2xl bg-zinc-900 px-6 active:bg-zinc-800"
-          onPress={() => navigateTo('records')}
+          onPress={() => navigation.navigate({ name: 'Records', params: { screen: 'List' } })}
           style={{
             elevation: 6,
           }}
@@ -231,7 +234,7 @@ export function HomeScreen() {
         <Animated.View className="mx-4 mt-4" style={stagger.style(3)}>
           <Pressable
             className="flex-row items-center overflow-hidden rounded-xl bg-amber-500 px-4 py-4 active:bg-amber-600"
-            onPress={() => navigateTo('records')}
+            onPress={() => navigation.navigate({ name: 'Records', params: { screen: 'List' } })}
           >
             <View className="mr-3 h-9 w-9 items-center justify-center rounded-lg bg-white/25">
               <Text className="text-sm font-bold text-white">⚠</Text>

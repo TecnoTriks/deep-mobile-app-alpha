@@ -1,22 +1,20 @@
+import { useIsFocused } from '@react-navigation/native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Platform, Pressable, Text, View } from 'react-native';
 
+import { useRecordsNavigation } from '../../../../navigation/hooks';
+import { useRecordsListContext } from '../../../../navigation/RecordsListContext';
 import { FilterModal } from '../../components/FilterModal';
 import { RecordCardItem } from '../../components/RecordCardItem';
 import { RecordsToolbar } from '../../components/RecordsToolbar';
 import { useRecords } from '../../hooks/useRecords';
 import type { RecordCard } from '../../../consolidated-data/types/offline';
-import type { FillRecordLocalStatus } from '../../../form-fill/types/form';
+import { BASELESS_GUID } from '../../../consolidated-data/services/offlineSync';
 
-const BASELESS_GUID = '00000000-0000-0000-0000-000000000000';
-
-type Props = {
-  localState?: { recordGuid: string; status: FillRecordLocalStatus } | null;
-  onOpenRecord: (recordGuid: string) => void;
-  visible: boolean;
-};
-
-export function RecordsScreen({ localState, onOpenRecord, visible }: Props) {
+export function RecordsScreen() {
+  const isFocused = useIsFocused();
+  const navigation = useRecordsNavigation();
+  const { localState } = useRecordsListContext();
   const {
     activeFilterLabel,
     clearFilters,
@@ -33,10 +31,15 @@ export function RecordsScreen({ localState, onOpenRecord, visible }: Props) {
     setSearch,
     setSelectedStatus,
     statuses,
-  } = useRecords();
+  } = useRecords(isFocused);
   const [isFilterVisible, setIsFilterVisible] = useState(false);
   const listRef = useRef<FlatList<RecordCard>>(null);
   const scrollOffset = useRef(0);
+
+  const openRecord = useCallback(
+    (recordGuid: string) => navigation.navigate('Fill', { recordGuid }),
+    [navigation],
+  );
 
   useEffect(() => {
     if (localState) markOfflineDraft(localState.recordGuid, localState.status);
@@ -48,11 +51,11 @@ export function RecordsScreen({ localState, onOpenRecord, visible }: Props) {
   }, [resetToken, search, selectedStatus]);
 
   useEffect(() => {
-    if (!visible || scrollOffset.current === 0) return;
+    if (!isFocused || scrollOffset.current === 0) return;
     requestAnimationFrame(() => {
       listRef.current?.scrollToOffset({ animated: false, offset: scrollOffset.current });
     });
-  }, [visible]);
+  }, [isFocused]);
 
   const clearFilter = () => {
     clearFilters();
@@ -65,8 +68,8 @@ export function RecordsScreen({ localState, onOpenRecord, visible }: Props) {
   }, [setSelectedStatus]);
 
   const renderRecord = useCallback(({ item }: { item: RecordCard }) => (
-    <RecordCardItem item={item} onOpenRecord={onOpenRecord} />
-  ), [onOpenRecord]);
+    <RecordCardItem item={item} onOpenRecord={openRecord} />
+  ), [openRecord]);
 
   if (isLoading && records.length === 0) {
     return (
@@ -89,7 +92,7 @@ export function RecordsScreen({ localState, onOpenRecord, visible }: Props) {
           </Text>
           <Pressable
             className="mt-5 min-h-12 items-center justify-center rounded-2xl bg-primary-500 px-4 active:bg-primary-600"
-            onPress={() => onOpenRecord(BASELESS_GUID)}
+            onPress={() => openRecord(BASELESS_GUID)}
           >
             <Text className="text-base font-semibold text-white">Iniciar preenchimento</Text>
           </Pressable>

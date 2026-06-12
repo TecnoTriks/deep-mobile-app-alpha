@@ -9,7 +9,7 @@ import type { FillRecordLocalStatus } from '../../form-fill/types/form';
 const SEARCH_DEBOUNCE_MS = 250;
 const PAGE_SIZE = 40;
 
-export function useRecords() {
+export function useRecords(enabled = true) {
   const database = useSQLiteContext();
   const requestId = useRef(0);
   const [records, setRecords] = useState<RecordCard[]>([]);
@@ -86,12 +86,14 @@ export function useRecords() {
   }, [database]);
 
   useEffect(() => {
+    if (!enabled) return;
     getFormBaseDados(database)
       .then(setFormBaseDados)
       .catch(() => setFormBaseDados(true));
-  }, [database]);
+  }, [database, enabled]);
 
   useEffect(() => {
+    if (!enabled) return;
     getBackofficeStatuses(database)
       .then((data) => {
         const mappedStatuses = data.map<StatusFilter>((status) => ({
@@ -120,9 +122,10 @@ export function useRecords() {
         ]);
       })
       .catch(() => setError('Nao foi possivel carregar os filtros.'));
-  }, [database]);
+  }, [database, enabled]);
 
   useEffect(() => {
+    if (!enabled) return;
     requestId.current += 1;
     isLoadingRef.current = true;
     isLoadingMoreRef.current = false;
@@ -134,7 +137,7 @@ export function useRecords() {
     }, search ? SEARCH_DEBOUNCE_MS : 0);
 
     return () => clearTimeout(timeout);
-  }, [loadRecords, resetToken, search, selectedStatus]);
+  }, [enabled, loadRecords, resetToken, search, selectedStatus]);
 
   const clearFilters = () => {
     setSearch('');

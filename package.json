@@ -10,6 +10,7 @@
     "axios": "^1.17.0",
     "expo": "~56.0.9",
     "expo-constants": "~56.0.17",
+    "expo-dev-client": "~56.0.20",
     "expo-device": "~56.0.4",
     "expo-document-picker": "~56.0.4",
     "expo-file-system": "~56.0.7",
@@ -38,6 +39,7 @@
     "start": "expo start",
     "android": "expo run:android",
     "typecheck": "tsc --noEmit",
+    "prebuild": "expo prebuild --clean",
     "build:apk": "npx eas-cli@latest build --platform android --profile apk",
     "build:apk:eas": "npx eas-cli@latest build --platform android --profile apk",
     "build:apk:local": "expo prebuild --platform android && cd android && gradlew.bat assembleRelease"
