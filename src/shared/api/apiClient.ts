@@ -1,4 +1,3 @@
-import * as Network from 'expo-network';
 import axios, { type InternalAxiosRequestConfig } from 'axios';
 
 import { env } from '../config/env';
@@ -19,17 +18,22 @@ export function setApiAccessToken(token: string | null) {
   apiClient.defaults.headers.common.Authorization = token ? `Bearer ${token}` : undefined;
 }
 
-// Verifica conectividade antes de qualquer requisicao ao backend
-apiClient.interceptors.request.use(async (config) => {
-  try {
-    const state = await Network.getNetworkStateAsync();
-    if (state.isConnected === false || state.isInternetReachable === false) {
-      return Promise.reject(
-        Object.assign(new Error('Sem conexão com a internet.'), { isNetworkError: true }),
-      );
-    }
-  } catch {
-    // Se a verificacao falhar, permite a requisicao prosseguir
+// Estado de conectividade mantido em cache e atualizado pelo NetworkProvider (que ja faz
+// polling a cada 10s + on app active). Evita uma chamada nativa (getNetworkStateAsync)
+// no caminho de TODA requisicao — relevante, por exemplo, durante o syncAll, que dispara
+// uma requisicao por preenchimento. Default `true` ate o provider reportar o primeiro estado.
+let cachedIsOnline = true;
+
+export function setApiNetworkOnline(isOnline: boolean) {
+  cachedIsOnline = isOnline;
+}
+
+// Verifica conectividade (em cache) antes de qualquer requisicao ao backend
+apiClient.interceptors.request.use((config) => {
+  if (!cachedIsOnline) {
+    return Promise.reject(
+      Object.assign(new Error('Sem conexão com a internet.'), { isNetworkError: true }),
+    );
   }
   return config;
 });

@@ -10,6 +10,7 @@ import { RecordDataTab } from './RecordDataTab';
 import { RetornosContext } from './RetornosContext';
 import { SelectionSheetProvider } from './SelectionSheet';
 import { SituacaoDeCampoFlow } from './SituacaoDeCampoFlow';
+import { createOfflineDraftData } from '../engine/formEngine';
 import { useDraftAutosave } from '../hooks/useDraftAutosave';
 import { useDynamicForm } from '../hooks/useDynamicForm';
 import { findFieldLabel } from '../utils/findFieldLabel';
@@ -42,7 +43,7 @@ export function DynamicForm({ data, onBack, onLocalStateSaved }: Props) {
     [],
   );
 
-  const { changeVersion, draftData, effectiveValues, errors, isDirty, markSaved, reset, setValue, validate, values } = useDynamicForm(data.form.fields, mergedInitialValues);
+  const { changeVersion, draftData, errors, isDirty, markSaved, reset, setValue, validate, values, visibility } = useDynamicForm(data.form.fields, mergedInitialValues);
   const [activeTab, setActiveTab] = useState<FillRecordTab>('form');
   const [alertState, setAlertState] = useState<{
     cancelLabel?: string;
@@ -127,7 +128,11 @@ export function DynamicForm({ data, onBack, onLocalStateSaved }: Props) {
 
     try {
       setLocalStatus('Preenchendo offline');
-      await persistDraft(values, draftData, 'Preenchendo offline');
+      // Recalcula o payload "dados" a partir dos valores atuais (nao da copia adiada),
+      // garantindo que o ultimo caractere digitado entre no envio mesmo se o submit
+      // ocorrer no mesmo quadro da ultima tecla.
+      const freshDraftData = createOfflineDraftData(data.form.fields, values);
+      await persistDraft(values, freshDraftData, 'Preenchendo offline');
       setAlertState({
         confirmLabel: 'OK',
         description: 'As respostas foram salvas neste aparelho.',
@@ -184,13 +189,13 @@ export function DynamicForm({ data, onBack, onLocalStateSaved }: Props) {
           {data.form.fields.map((field, index) => (
             <DynamicFieldRenderer
               draftScope={draftScope}
-              effectiveValues={effectiveValues}
               errors={errors}
               field={field}
               isLastChild={index === data.form.fields.length - 1}
               key={field.id}
               onChange={changeValue}
               values={values}
+              visibility={visibility}
             />
           ))}
 

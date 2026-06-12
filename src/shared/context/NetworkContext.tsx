@@ -2,6 +2,8 @@ import * as Network from 'expo-network';
 import { createContext, type PropsWithChildren, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { AppState } from 'react-native';
 
+import { setApiNetworkOnline } from '../api/apiClient';
+
 type NetworkContextValue = {
   isOnline: boolean;
   checkNow: () => Promise<void>;
@@ -18,7 +20,10 @@ export function NetworkProvider({ children }: PropsWithChildren) {
   const checkConnectivity = useCallback(async () => {
     try {
       const state = await Network.getNetworkStateAsync();
-      setIsOnline(state.isConnected !== false && state.isInternetReachable !== false);
+      const online = state.isConnected !== false && state.isInternetReachable !== false;
+      setIsOnline(online);
+      // Mantem o cache usado pelo interceptor do apiClient em sincronia com o estado real.
+      setApiNetworkOnline(online);
     } catch {
       // Se a verificacao falhar, mantém o estado atual para nao bloquear o usuario
     }

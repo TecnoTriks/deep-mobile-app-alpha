@@ -198,6 +198,9 @@ export async function saveFillRecordDraft(
 ) {
   const draftVersion = nextDraftVersion();
   const updatedAt = new Date().toISOString();
+  // values_json e state_json guardam o mesmo conteudo: serializa uma unica vez para nao
+  // pagar dois JSON.stringify (potencialmente grandes, ex.: assinatura em base64) por save.
+  const stateJson = JSON.stringify(state);
   await database.runAsync(
     `INSERT INTO offline_form_drafts
        (record_guid, form_guid, values_json, state_json, dados_json, status, updated_at, updated_at_ms)
@@ -212,8 +215,8 @@ export async function saveFillRecordDraft(
      WHERE excluded.updated_at_ms >= offline_form_drafts.updated_at_ms`,
     recordGuid,
     formGuid,
-    JSON.stringify(state),
-    JSON.stringify(state),
+    stateJson,
+    stateJson,
     JSON.stringify({ dados } satisfies OfflineDraftPayload),
     status,
     updatedAt,
@@ -242,6 +245,7 @@ export async function saveSituacaoDeCampo(
 
   const state = { __situacao_foto__: [photoUri] };
   const dados = { situacao: { guid: situacao.guid, titulo: situacao.titulo, foto: fileName } };
+  const stateJson = JSON.stringify(state);
 
   await database.runAsync(
     `INSERT INTO offline_form_drafts
@@ -257,8 +261,8 @@ export async function saveSituacaoDeCampo(
      WHERE excluded.updated_at_ms >= offline_form_drafts.updated_at_ms`,
     recordGuid,
     formGuid,
-    JSON.stringify(state),
-    JSON.stringify(state),
+    stateJson,
+    stateJson,
     JSON.stringify({ dados } satisfies OfflineDraftPayload),
     updatedAt,
     draftVersion,

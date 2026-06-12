@@ -135,6 +135,29 @@ function visibilityMap(fields: DynamicField[], values: FormValues): Map<string, 
   return map;
 }
 
+/**
+ * Mapa de visibilidade de TODOS os campos (inclui grupos, titulos e dividers), com a
+ * visibilidade do pai ja propagada para os filhos. Calculado uma unica vez por mudanca
+ * de valores e compartilhado com a renderizacao para que cada campo nao precise
+ * reavaliar a logica condicional (jsonLogic) por conta propria a cada re-render.
+ */
+export function buildVisibilityMap(fields: DynamicField[], values: FormValues): Map<string, boolean> {
+  const map = new Map<string, boolean>();
+
+  const visit = (items: DynamicField[], parentVisible: boolean) => {
+    items.forEach((field) => {
+      const visible = isFieldVisible(field, values, parentVisible);
+      map.set(field.id, visible);
+      if (field.type === 'group') {
+        visit(field.config.children ?? [], visible);
+      }
+    });
+  };
+
+  visit(fields, true);
+  return map;
+}
+
 export function getEffectiveValues(fields: DynamicField[], values: FormValues): FormValues {
   const ids = collectFieldIds(fields);
   let current: FormValues = { ...values };

@@ -1,11 +1,11 @@
+import { useQuery } from '@tanstack/react-query';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { ActivityIndicator, Animated, Image, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '../../auth/context/AuthContext';
 import { getHomeDashboardData } from '../../consolidated-data/services/offlineQueries';
-import type { HomeDashboardData } from '../../consolidated-data/types/offline';
 import { useAppNav } from '../../../shared/context/AppNavContext';
 
 // ─── animation helper ─────────────────────────────────────────────────────────
@@ -97,32 +97,30 @@ export function HomeScreen() {
   const { navigateTo } = useAppNav();
   const insets = useSafeAreaInsets();
 
-  const [data, setData] = useState<HomeDashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const agentGuid = session?.agent.guid;
 
   // 6 staggered zones: header, context strip, stats row, cta, alert, carousel
   const stagger = useStagger(6);
 
-  const load = useCallback(async () => {
-    if (!session) return;
-    setLoading(true);
-    try {
-      setData(await getHomeDashboardData(database, session.agent.guid));
-    } catch {
-      setData(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [database, session]);
+  // Os contadores ficam em cache (react-query): ao voltar para a Home os ultimos numeros
+  // aparecem na hora (sem spinner) enquanto um refetch em segundo plano atualiza os dados.
+  // Com staleTime 0 o refetch acontece a cada montagem, garantindo numeros sempre frescos
+  // apos preencher/sincronizar — sem recalculo bloqueante a cada abertura.
+  const { data, isLoading, refetch } = useQuery({
+    enabled: Boolean(agentGuid),
+    queryFn: () => getHomeDashboardData(database, agentGuid!),
+    queryKey: ['home-dashboard', agentGuid],
+    staleTime: 0,
+  });
 
-  useEffect(() => { void load(); }, [load]);
+  const load = useCallback(() => { void refetch(); }, [refetch]);
 
   useEffect(() => {
-    if (!loading && data) stagger.run();
+    if (data) stagger.run();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, data]);
+  }, [data]);
 
-  if (loading) {
+  if (isLoading && !data) {
     return (
       <View className="flex-1 items-center justify-center bg-zinc-50">
         <ActivityIndicator color="#8b5cf6" size="large" />

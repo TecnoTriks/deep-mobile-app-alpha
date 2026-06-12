@@ -1,7 +1,6 @@
 import { memo, useCallback } from 'react';
 import { Text, View } from 'react-native';
 
-import { isFieldVisible } from '../engine/formEngine';
 import type { DynamicField, FormErrors, FormValue, FormValues } from '../types/form';
 import { useRetornos } from './RetornosContext';
 import { CheckboxField } from './fields/CheckboxField';
@@ -22,30 +21,28 @@ type Props = {
     recordGuid: string;
   };
   errors: FormErrors;
-  effectiveValues: FormValues;
   field: DynamicField;
   isLastChild?: boolean;
   onChange: (fieldId: string, value: FormValue) => void;
-  parentVisible?: boolean;
   values: FormValues;
+  visibility: Map<string, boolean>;
 };
 
 function DynamicFieldRendererComponent({
   draftScope,
   errors,
-  effectiveValues,
   field,
   isLastChild = false,
   onChange,
-  parentVisible = true,
   values,
+  visibility,
 }: Props) {
   const reprovados = useRetornos();
   const changeFieldValue = useCallback(
     (value: FormValue) => onChange(field.id, value),
     [field.id, onChange],
   );
-  const visible = isFieldVisible(field, effectiveValues, parentVisible);
+  const visible = visibility.get(field.id) ?? true;
   if (!visible) return null;
 
   const commonProps = {
@@ -104,12 +101,11 @@ function DynamicFieldRendererComponent({
                 <DynamicFieldRenderer
                   draftScope={draftScope}
                   errors={errors}
-                  effectiveValues={effectiveValues}
                   field={child}
                   isLastChild={index === (field.config.children ?? []).length - 1}
                   onChange={onChange}
-                  parentVisible={visible}
                   values={values}
+                  visibility={visibility}
                 />
               </View>
             ))}
@@ -135,7 +131,6 @@ function propsAreEqual(previous: Props, next: Props) {
   if (
     previous.field !== next.field
     || previous.onChange !== next.onChange
-    || previous.parentVisible !== next.parentVisible
     || previous.isLastChild !== next.isLastChild
     || previous.draftScope.formGuid !== next.draftScope.formGuid
     || previous.draftScope.recordGuid !== next.draftScope.recordGuid
@@ -143,13 +138,14 @@ function propsAreEqual(previous: Props, next: Props) {
     return false;
   }
 
+  // Grupos sempre re-renderizam para que os filhos reavaliem a propria visibilidade.
   if (next.field.type.toLowerCase() === 'group') return false;
 
+  // Comparacao O(1): le o booleano ja calculado no mapa em vez de reavaliar jsonLogic.
   const fieldId = next.field.id;
   return Object.is(previous.values[fieldId], next.values[fieldId])
     && previous.errors[fieldId] === next.errors[fieldId]
-    && isFieldVisible(previous.field, previous.effectiveValues, previous.parentVisible)
-      === isFieldVisible(next.field, next.effectiveValues, next.parentVisible);
+    && previous.visibility.get(fieldId) === next.visibility.get(fieldId);
 }
 
 export const DynamicFieldRenderer = memo(DynamicFieldRendererComponent, propsAreEqual);
