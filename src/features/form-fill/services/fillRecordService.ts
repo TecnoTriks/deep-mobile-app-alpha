@@ -224,6 +224,21 @@ export async function saveFillRecordDraft(
   );
 }
 
+/**
+ * Le de volta o rascunho recem-salvo e confirma que ele esta exatamente no estado que a
+ * tela de Sincronizacao exige para envio (status 'Preenchendo offline' + payload presente).
+ * Usado logo apos "Concluir": so dizemos "Salvo" ao usuario se o dado estiver provadamente
+ * no banco e visivel para o Sync — em vez de confiar que o INSERT funcionou.
+ */
+export async function isDraftReadyForSync(database: SQLiteDatabase, recordGuid: string, formGuid: string): Promise<boolean> {
+  const row = await database.getFirstAsync<{ status: string; dados_json: string | null }>(
+    'SELECT status, dados_json FROM offline_form_drafts WHERE record_guid = ? AND form_guid = ? LIMIT 1',
+    recordGuid,
+    formGuid,
+  );
+  return row?.status === 'Preenchendo offline' && !!row.dados_json;
+}
+
 export async function clearFillRecordDraft(database: SQLiteDatabase, recordGuid: string, formGuid: string) {
   await database.runAsync(
     'DELETE FROM offline_form_drafts WHERE record_guid = ? AND form_guid = ?',

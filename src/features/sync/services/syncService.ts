@@ -106,17 +106,18 @@ async function buildUploads(uploadFields: DynamicField[], dados: FormValues, sta
     const uris = asStringArray(stateValues[field.id]);
     const urls: string[] = [];
 
+    // Tudo-ou-nada por preenchimento: cada nome em `dados[field]` precisa ter o seu base64
+    // na MESMA posicao em `urls` (o servidor casa por field_id + indice). Se um arquivo
+    // referenciado nao existir/nao puder ser lido, falha o preenchimento inteiro (mantido
+    // para reenvio) em vez de enviar uma lista parcial e desalinhada — o que apagaria o
+    // rascunho com dado faltando (falso positivo).
     for (let index = 0; index < fileNames.length; index += 1) {
       const uri = uris[index];
-      if (!uri) continue;
-
-      try {
-        const base64 = await new File(uri).base64();
-        urls.push(`data:${inferMimeType(fileNames[index])};base64,${base64}`);
-      } catch {
-        // Se um arquivo nao puder ser lido (ex.: removido do disco), ele e ignorado para
-        // nao travar o envio dos demais arquivos e campos do mesmo preenchimento.
+      if (!uri) {
+        throw new Error(`Arquivo "${fileNames[index]}" do campo ${field.id} nao foi encontrado para envio.`);
       }
+      const base64 = await new File(uri).base64();
+      urls.push(`data:${inferMimeType(fileNames[index])};base64,${base64}`);
     }
 
     if (urls.length > 0) {
@@ -280,12 +281,10 @@ export async function syncDraft(database: SQLiteDatabase, agentGuid: string, dra
     if (situacaoFotoUris.length > 0) {
       const uri = situacaoFotoUris[0];
       const fileName = uri.split('/').pop() ?? 'foto.jpg';
-      try {
-        const base64 = await new File(uri).base64();
-        uploads.push({ field_id: 'foto', urls: [`data:${inferMimeType(fileName)};base64,${base64}`] });
-      } catch {
-        // Photo may have been removed — continue without it
-      }
+      // Mesma regra tudo-ou-nada: se a foto da situacao foi registrada mas nao pode ser lida,
+      // falha o envio (mantem o rascunho) em vez de enviar a situacao sem a foto.
+      const base64 = await new File(uri).base64();
+      uploads.push({ field_id: 'foto', urls: [`data:${inferMimeType(fileName)};base64,${base64}`] });
     }
     const dadosRecord = dados as Record<string, unknown>;
     const situacaoData = dadosRecord.situacao as Record<string, unknown> | undefined;

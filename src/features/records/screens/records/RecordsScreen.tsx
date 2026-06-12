@@ -86,7 +86,7 @@ export function RecordsScreen() {
   if (isLoading && records.length === 0) {
     return (
       <View className="flex-1 items-center justify-center bg-zinc-50">
-        <ActivityIndicator color="#8b5cf6" size="large" />
+        <ActivityIndicator color="#ff6022" size="large" />
       </View>
     );
   }
@@ -102,7 +102,7 @@ export function RecordsScreen() {
                 className="h-28 w-28 items-center justify-center rounded-full bg-white"
                 style={{ elevation: 8 }}
               >
-                <ClipboardIcon color="#8b5cf6" size={48} />
+                <ClipboardIcon color="#ff6022" size={48} />
               </View>
             </View>
           </View>
@@ -119,7 +119,7 @@ export function RecordsScreen() {
               className="min-h-[60px] flex-row items-center justify-center gap-2 rounded-2xl bg-white px-4 active:bg-primary-50"
               onPress={() => openRecord(BASELESS_GUID)}
             >
-              <PlusIcon color="#ef561d" size={22} />
+              <PlusIcon color="#ff6022" size={22} />
               <Text className="text-base font-bold text-primary-600">Iniciar preenchimento</Text>
             </Pressable>
           </View>
@@ -157,7 +157,7 @@ export function RecordsScreen() {
           keyExtractor={(item) => item.guid}
           ListFooterComponent={isLoadingMore ? (
             <View className="items-center py-4">
-              <ActivityIndicator color="#8b5cf6" />
+              <ActivityIndicator color="#ff6022" />
             </View>
           ) : null}
           maxToRenderPerBatch={10}

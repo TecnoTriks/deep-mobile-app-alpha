@@ -272,8 +272,9 @@ export function collectVisibleFormValues(fields: DynamicField[], values: FormVal
 
 function getFileName(value: FormValue) {
   if (typeof value !== 'string') return value;
-  const fileName = decodeURIComponent(value.split('/').pop()?.split('?')[0] ?? value);
-  return fileName.replace(/^\d+-\d+-/, '');
+  // O basename ja e o nome unico (UUID) com que o arquivo foi salvo; e essa a identidade
+  // enviada em `dados`. Nao remover nenhum prefixo aqui, sob risco de recriar colisao de nomes.
+  return decodeURIComponent(value.split('/').pop()?.split('?')[0] ?? value);
 }
 
 export function createOfflineDraftData(fields: DynamicField[], values: FormValues, effectiveValues = getEffectiveValues(fields, values)) {

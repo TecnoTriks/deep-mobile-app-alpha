@@ -8,10 +8,22 @@ const COPY_BATCH_SIZE = 3;
 
 export type PersistedFileResult = { ok: true; uri: string } | { ok: false; uri: null };
 
-function safeFileName(uri: string, index: number) {
-  const originalName = decodeURIComponent(uri.split('/').pop()?.split('?')[0] ?? `arquivo-${index}`);
-  const normalizedName = originalName.replace(/[^a-zA-Z0-9._-]/g, '_');
-  return `${Date.now()}-${index}-${normalizedName}`;
+function uuidv4() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (char) => {
+    const random = (Math.random() * 16) | 0;
+    const value = char === 'x' ? random : (random & 0x3) | 0x8;
+    return value.toString(16);
+  });
+}
+
+// Nome unico e estavel por arquivo (UUID), no mesmo formato que o backend ja recebe
+// do app web (ex.: "f5e56112-c90e-4988-899c-43881be48be3.jpeg"). A unicidade do nome e
+// a identidade do arquivo no envio: dois arquivos NUNCA podem compartilhar nome, senao
+// colidem no servidor. O nome guardado no disco e o mesmo enviado em `dados`.
+function safeFileName(uri: string) {
+  const rawExtension = uri.split('?')[0].split('.').pop()?.toLowerCase() ?? '';
+  const extension = /^[a-z0-9]{1,5}$/.test(rawExtension) ? rawExtension : 'dat';
+  return `${uuidv4()}.${extension}`;
 }
 
 /**
@@ -29,12 +41,11 @@ export async function persistDraftFiles(recordGuid: string, formGuid: string, fi
   for (let start = 0; start < uris.length; start += COPY_BATCH_SIZE) {
     const batch = uris.slice(start, start + COPY_BATCH_SIZE);
     // eslint-disable-next-line no-await-in-loop
-    const batchResults = await Promise.allSettled(batch.map(async (uri, offset) => {
-      const index = start + offset;
+    const batchResults = await Promise.allSettled(batch.map(async (uri) => {
       if (uri.startsWith(directory.uri)) return uri;
 
       const source = new File(uri);
-      const destination = new File(directory, safeFileName(uri, index));
+      const destination = new File(directory, safeFileName(uri));
       await source.copy(destination);
       return destination.uri;
     }));

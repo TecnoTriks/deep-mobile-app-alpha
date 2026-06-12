@@ -13,6 +13,7 @@ import { SituacaoDeCampoFlow } from './SituacaoDeCampoFlow';
 import { createOfflineDraftData } from '../engine/formEngine';
 import { useDraftAutosave } from '../hooks/useDraftAutosave';
 import { useDynamicForm } from '../hooks/useDynamicForm';
+import { isDraftReadyForSync } from '../services/fillRecordService';
 import { findFieldLabel } from '../utils/findFieldLabel';
 import type { FillRecordData, FillRecordLocalStatus, FormValue } from '../types/form';
 import { AlertModal } from '../../../shared/components/AlertModal';
@@ -134,6 +135,19 @@ export function DynamicForm({ data, onBack, onLocalStateSaved }: Props) {
       // ocorrer no mesmo quadro da ultima tecla.
       const freshDraftData = createOfflineDraftData(data.form.fields, values);
       await persistDraft(values, freshDraftData, 'Preenchendo offline');
+
+      // Verificacao de integridade: le de volta do banco antes de confirmar ao usuario.
+      // So mostra "Salvo" se o preenchimento realmente ficou persistido e visivel para o Sync.
+      const persisted = await isDraftReadyForSync(database, data.record.guid, data.form.guid);
+      if (!persisted) {
+        setAlertState({
+          confirmLabel: 'Fechar',
+          description: 'Nao foi possivel confirmar o salvamento neste aparelho. Toque em concluir novamente.',
+          title: 'Falha ao salvar',
+        });
+        return;
+      }
+
       setAlertState({
         confirmLabel: 'OK',
         description: 'As respostas foram salvas neste aparelho.',

@@ -50,15 +50,24 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     (async () => {
-      const storedSession = await loadSession(database);
+      try {
+        const storedSession = await loadSession(database);
 
-      if (storedSession) {
-        setApiAccessToken(storedSession.token);
-        setSession(storedSession);
-        setIsOfflineReady(await isOfflineDataReady(database, storedSession.agent.guid));
+        if (storedSession) {
+          setApiAccessToken(storedSession.token);
+          setSession(storedSession);
+          setIsOfflineReady(await isOfflineDataReady(database, storedSession.agent.guid));
+        }
+      } catch (error) {
+        // Uma falha transitoria de leitura do banco no cold start NAO pode deixar o app
+        // preso no LoadingScreen (sem tela de login). Sem sessao restaurada, cai para o
+        // Login — fluxo previsivel — e o erro fica registrado, nunca silencioso.
+        console.error('[auth] Falha ao restaurar sessao no bootstrap:', error);
+        setApiAccessToken(null);
+        setSession(null);
+      } finally {
+        setIsLoading(false);
       }
-
-      setIsLoading(false);
     })();
   }, [database]);
 

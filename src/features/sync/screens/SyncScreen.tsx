@@ -1,3 +1,4 @@
+import { useFocusEffect } from '@react-navigation/native';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, FlatList, Pressable, Text, View } from 'react-native';
@@ -77,12 +78,22 @@ export function SyncScreen() {
   }, [database]);
 
   useEffect(() => {
-    void loadDrafts();
     Animated.parallel([
       Animated.timing(headerOpacity, { duration: 380, toValue: 1, useNativeDriver: true }),
       Animated.spring(headerScale, { toValue: 1, useNativeDriver: true, tension: 80, friction: 10 }),
     ]).start();
-  }, [loadDrafts]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Recarrega a lista toda vez que a tela ganha foco (e nao so no mount). Sem isso, ao voltar
+  // para a Sync — cuja instancia o stack reaproveita — um preenchimento concluido depois da
+  // primeira visita nao apareceria ate um refresh manual. So recarrega quando ocioso, para nao
+  // apagar o resultado de um envio em andamento/concluido.
+  useFocusEffect(
+    useCallback(() => {
+      if (phase === 'idle') void loadDrafts();
+    }, [loadDrafts, phase]),
+  );
 
   const handleSync = async () => {
     if (!session || drafts.length === 0 || phase === 'syncing') return;
