@@ -4,10 +4,10 @@ import { useCallback, useEffect, useRef } from 'react';
 import { ActivityIndicator, Animated, Image, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useAuth } from '../../auth/context/AuthContext';
-import { getHomeDashboardData } from '../../consolidated-data/services/offlineQueries';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useAuth } from '../../auth/context/AuthContext';
+import { getHomeDashboardData } from '../../consolidated-data/services/offlineQueries';
 
 import type { AppStackParamList } from '../../../navigation/types';
 
@@ -59,7 +59,6 @@ function StatChip({
     <View
       className={`flex-1 items-center justify-center rounded-xl py-4 ${accent ? 'bg-primary-500' : 'bg-white'}`}
       style={{
-        elevation: accent ? 3 : 1,
         ...(ringColor ? { borderWidth: 2, borderColor: ringColor } : {}),
       }}
     >
@@ -80,7 +79,7 @@ function MetricCard({ label, value, color }: { label: string; value: number; col
   return (
     <View
       className="items-center justify-center rounded-2xl bg-white px-6 py-5"
-      style={{ elevation: 1, minWidth: 120, borderLeftWidth: 3, borderLeftColor: color }}
+      style={{ minWidth: 120, borderLeftWidth: 3, borderLeftColor: color }}
     >
       <Text className="text-3xl font-bold text-zinc-900">
         {value.toLocaleString('pt-BR')}
@@ -120,7 +119,7 @@ export function HomeScreen() {
 
   useEffect(() => {
     if (data) stagger.run();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data]);
 
   if (isLoading && !data) {
@@ -155,13 +154,13 @@ export function HomeScreen() {
   return (
     <ScrollView
       className="flex-1 bg-zinc-50"
-      contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
+      contentContainerStyle={{ flexGrow: 1, paddingBottom: insets.bottom + 40 }}
       showsVerticalScrollIndicator={false}
     >
 
       {/* ── 1. Cabeçalho com identidade operacional ─────────────────────── */}
       <Animated.View style={stagger.style(0)}>
-        <View className="bg-primary-500 px-5 pb-12 pt-6">
+        <View className="rounded-b-[12px] bg-primary-500 px-5 pb-12 pt-6">
           <Text
             className="text-xs font-semibold uppercase tracking-[3px] text-primary-200"
             numberOfLines={1}
@@ -197,8 +196,6 @@ export function HomeScreen() {
           </View>
         </View>
 
-        {/* curva visual */}
-        <View className="h-5 rounded-b-[20px] bg-primary-500" />
       </Animated.View>
 
       {/* ── 2. Stats rápidas (3 chips) ──────────────────────────────────── */}
@@ -279,8 +276,11 @@ export function HomeScreen() {
         </ScrollView>
       </Animated.View>
 
+      {/* ── spacer ──────────────────────────────────────────────────────── */}
+      <View className="flex-1" />
+
       {/* ── Logo ─────────────────────────────────────────────────────────── */}
-      <View className="mt-4 items-center pb-2">
+      <View className="items-center pb-2">
         <Image
           resizeMode="contain"
           source={require('../../../../assets/deep/logo.jpg')}

@@ -41,6 +41,52 @@ async function rebuildRecordsSearchIndex(database: SQLiteDatabase) {
   `);
 }
 
+/**
+ * Le o flag `form_base_dados` de forma tolerante: o backend pode enviar booleano,
+ * string ("false") ou numero (0). Qualquer uma dessas formas de "false" significa
+ * "sem base de dados".
+ */
+function isFormBaseDados(equipe: unknown): boolean {
+  const value = (equipe as { form_base_dados?: unknown } | null | undefined)?.form_base_dados;
+  return !(value === false || value === 'false' || value === 0 || value === '0');
+}
+
+/**
+ * Grava o registro virtual unico do modo "sem base".
+ *
+ * Suspende os triggers do FTS antes de mexer em `offline_records` e reconstroi o indice
+ * depois — exatamente como o caminho com base. Sem isso, o `DELETE FROM offline_records`
+ * dispara o trigger de delete do FTS linha a linha sobre o indice externo; se o indice
+ * estiver inconsistente (ex.: troca de um dataset com base para sem base), o FTS5 levanta
+ * um erro nativo que o try/catch do JS nao captura e que ENCERRA o app.
+ */
+async function saveBaselessRecord(
+  database: SQLiteDatabase,
+  teamGuid: string,
+  contractGuid: string,
+  agentGuid: string,
+) {
+  await suspendRecordsSearchIndex(database);
+  try {
+    await database.withExclusiveTransactionAsync(async (tx) => {
+      await tx.execAsync('DELETE FROM offline_backoffice; DELETE FROM offline_records;');
+      await tx.runAsync(
+        `INSERT OR REPLACE INTO offline_records
+         (guid, name, address, street, neighborhood, customer_code,
+          latitude, longitude, team_guid, contract_guid, agent_guid,
+          field_record_guid, backoffice_status_guid, created_at, modified_at, visits, base_dados_guid, raw_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        BASELESS_GUID, 'Preenchimento sem base', null, null, null, null,
+        null, null, teamGuid, contractGuid, agentGuid,
+        null, null, null, null, 0, BASELESS_GUID, '{}',
+      );
+    });
+  } finally {
+    await rebuildRecordsSearchIndex(database);
+    await database.execAsync('PRAGMA wal_checkpoint(PASSIVE);');
+  }
+}
+
 function serializeRecord(record: Record<string, unknown>) {
   return JSON.stringify(record, (key, value) => key === 'campo_backoffice' ? undefined : value);
 }
@@ -106,7 +152,7 @@ async function saveRecords(
   consolidated: ConsolidatedData,
   onProgress: (progress: PreparationProgress) => void,
 ) {
-  const records = consolidated.registros;
+  const records = consolidated.registros ?? [];
   await suspendRecordsSearchIndex(database);
 
   try {
@@ -220,36 +266,26 @@ export async function prepareOfflineData(
     onProgress({ step: 'structures', message: 'Preparando equipe, area, contrato e formulario' });
     await saveStructures(database, agent, consolidated);
 
-    const formBaseDados = (consolidated.equipe as { form_base_dados?: unknown }).form_base_dados !== false;
+    const formBaseDados = isFormBaseDados(consolidated.equipe);
     const teamGuid = agent.equipe_guid || agent.equipe_id!;
+    const registrosCount = consolidated.registros?.length ?? 0;
 
     if (formBaseDados) {
-      onProgress({ step: 'records', message: 'Organizando os registros para uso offline', current: 0, total: consolidated.registros.length });
+      onProgress({ step: 'records', message: 'Organizando os registros para uso offline', current: 0, total: registrosCount });
       await saveRecords(database, consolidated, onProgress);
     } else {
-      // Sem base: nao ha lista de registros — insere registro virtual unico
-      onProgress({ step: 'records', message: 'Preparando preenchimento sem base de dados', current: 0, total: 1 });
-      await database.withExclusiveTransactionAsync(async (tx) => {
-        await tx.execAsync('DELETE FROM offline_backoffice; DELETE FROM offline_records;');
-        await tx.runAsync(
-          `INSERT OR REPLACE INTO offline_records
-           (guid, name, address, street, neighborhood, customer_code,
-            latitude, longitude, team_guid, contract_guid, agent_guid,
-            field_record_guid, backoffice_status_guid, created_at, modified_at, visits, base_dados_guid, raw_json)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          BASELESS_GUID, 'Preenchimento sem base', null, null, null, null,
-          null, null, teamGuid, agent.contrato_id!, agentGuid,
-          null, null, null, null, 0, BASELESS_GUID, '{}',
-        );
-      });
-      onProgress({ step: 'records', message: 'Preenchimento sem base configurado', current: 1, total: 1 });
+      // Sem base: nao ha lista de registros — insere registro virtual unico.
+      // Sem `current`/`total` para que a tela mostre so a mensagem (sem contador "0 de 1").
+      onProgress({ step: 'records', message: 'Preparando preenchimento sem base de dados' });
+      await saveBaselessRecord(database, teamGuid, agent.contrato_id!, agentGuid);
+      onProgress({ step: 'records', message: 'Preenchimento sem base configurado' });
     }
 
     onProgress({ step: 'situacoes', message: 'Atualizando situacoes de campo e backoffice' });
     const [campo, backoffice] = await Promise.all([fetchSituacoesCampo(), fetchSituacoesBackoffice()]);
     await saveSituacoes(database, campo, backoffice);
 
-    const recordsCount = formBaseDados ? consolidated.registros.length : 0;
+    const recordsCount = formBaseDados ? registrosCount : 0;
     await database.runAsync(
       `INSERT OR REPLACE INTO offline_sync_state (agent_guid, status, records_count, updated_at, error_message)
        VALUES (?, 'ready', ?, ?, NULL)`,

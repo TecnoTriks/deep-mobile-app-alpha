@@ -7,6 +7,16 @@ const FILLABLE_STATUS_GUIDS = [
   'cd547821-a95c-4073-8454-aa618c32ef6e',
 ];
 
+/**
+ * Le `form_base_dados` de forma tolerante (booleano, string "false" ou numero 0 contam
+ * como "sem base"). Mantem a mesma logica usada na ingestao (offlineSync) para que toda a
+ * UI concorde sobre o modo sem base.
+ */
+function parseFormBaseDados(equipe: { form_base_dados?: unknown }): boolean {
+  const value = equipe.form_base_dados;
+  return !(value === false || value === 'false' || value === 0 || value === '0');
+}
+
 export async function getSummaryData(database: SQLiteDatabase, agentGuid: string): Promise<SummaryData | null> {
   const profile = await database.getFirstAsync<{ team_name: string; group_name: string }>(
     'SELECT team_name, group_name FROM agent_profiles WHERE guid = ?',
@@ -25,6 +35,7 @@ export async function getSummaryData(database: SQLiteDatabase, agentGuid: string
     groupName: profile.group_name ?? '—',
     formName: form?.name ?? '—',
     recordsCount: state?.records_count ?? 0,
+    formBaseDados: await getFormBaseDados(database),
   };
 }
 
@@ -256,7 +267,7 @@ export async function getFormBaseDados(database: SQLiteDatabase): Promise<boolea
   if (!row) return true;
   try {
     const equipe = JSON.parse(row.raw_json) as { form_base_dados?: unknown };
-    return equipe.form_base_dados !== false;
+    return parseFormBaseDados(equipe);
   } catch {
     return true;
   }
@@ -302,7 +313,7 @@ export async function getHomeDashboardData(database: SQLiteDatabase, agentGuid: 
   if (teamRow) {
     try {
       const equipe = JSON.parse(teamRow.raw_json) as { form_base_dados?: unknown };
-      formBaseDados = equipe.form_base_dados !== false;
+      formBaseDados = parseFormBaseDados(equipe);
     } catch {
       /* default true */
     }

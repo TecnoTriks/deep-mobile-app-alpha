@@ -189,7 +189,15 @@ export function OfflinePreparationScreen({ forceFullRefresh = false, onAdvance }
                   </View>
                   <View className="flex-1">
                     <Text className="text-xs text-zinc-400">Registros</Text>
-                    <Text className="text-sm font-medium text-zinc-950">{summary?.recordsCount} registros</Text>
+                    <Text className="text-sm font-medium text-zinc-950">
+                      {summary
+                        ? !summary.formBaseDados
+                          ? 'Sem base'
+                          : summary.recordsCount === 0
+                            ? 'Nenhum registro'
+                            : `${summary.recordsCount} registros`
+                        : '—'}
+                    </Text>
                   </View>
                 </View>
               </View>

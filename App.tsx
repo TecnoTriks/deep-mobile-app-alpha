@@ -7,16 +7,22 @@ import * as SplashScreen from 'expo-splash-screen';
 import { SQLiteProvider } from 'expo-sqlite';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, View } from 'react-native';
+import { Animated } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider } from './src/features/auth/context/AuthContext';
 import { linking } from './src/navigation/linking';
 import { navigationRef } from './src/navigation/navigationRef';
 import { RootNavigator } from './src/navigation/RootNavigator';
-import { migrateDatabase } from './src/shared/database/migrations';
+import { ErrorBoundary } from './src/shared/components/ErrorBoundary';
+import { LastCrashNotice } from './src/shared/components/LastCrashNotice';
 import { NetworkProvider } from './src/shared/context/NetworkContext';
+import { migrateDatabase } from './src/shared/database/migrations';
+import { installGlobalErrorHandler } from './src/shared/diagnostics/installGlobalErrorHandler';
 import { queryClient } from './src/shared/query/queryClient';
+
+// Registra o handler global de erros fatais o mais cedo possivel, antes de qualquer render.
+installGlobalErrorHandler();
 
 // Prevent the native splash from auto-hiding — we control the timing.
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
@@ -86,23 +92,26 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <NetworkProvider>
-        <SQLiteProvider
-          databaseName="deep-agente.db"
-          onInit={migrateDatabase}
-          options={{ finalizeUnusedStatementsBeforeClosing: false }}
-        >
-          <QueryClientProvider client={queryClient}>
-            <AuthProvider>
-              <NavigationContainer linking={linking} ref={navigationRef}>
-                <StatusBar style="dark" />
-                <RootNavigator />
-              </NavigationContainer>
-              {!splashDone && <CustomSplash onDone={handleSplashDone} />}
-            </AuthProvider>
-          </QueryClientProvider>
-        </SQLiteProvider>
-      </NetworkProvider>
+      <ErrorBoundary>
+        <NetworkProvider>
+          <SQLiteProvider
+            databaseName="deep-agente.db"
+            onInit={migrateDatabase}
+            options={{ finalizeUnusedStatementsBeforeClosing: false }}
+          >
+            <QueryClientProvider client={queryClient}>
+              <AuthProvider>
+                <NavigationContainer linking={linking} ref={navigationRef}>
+                  <StatusBar style="dark" />
+                  <RootNavigator />
+                </NavigationContainer>
+                {!splashDone && <CustomSplash onDone={handleSplashDone} />}
+                <LastCrashNotice />
+              </AuthProvider>
+            </QueryClientProvider>
+          </SQLiteProvider>
+        </NetworkProvider>
+      </ErrorBoundary>
     </SafeAreaProvider>
   );
 }
