@@ -70,7 +70,9 @@ function DynamicFieldRendererComponent({
 
   const wrap = (node: React.ReactNode) => <View style={fieldSpacingStyle}>{node}</View>;
 
-  switch (field.type.toLowerCase()) {
+  // `field.type` vem de JSON do servidor: um campo sem "type" (ou nao-string) faria
+  // `.toLowerCase()` lancar e — sem isso — fecharia o app. Normaliza com seguranca.
+  switch (String(field.type ?? '').toLowerCase()) {
     case 'text':
       return wrap(wrapWithRejection(<TextField {...commonProps} />));
     case 'number':
@@ -139,7 +141,7 @@ function propsAreEqual(previous: Props, next: Props) {
   }
 
   // Grupos sempre re-renderizam para que os filhos reavaliem a propria visibilidade.
-  if (next.field.type.toLowerCase() === 'group') return false;
+  if (String(next.field.type ?? '').toLowerCase() === 'group') return false;
 
   // Comparacao O(1): le o booleano ja calculado no mapa em vez de reavaliar jsonLogic.
   const fieldId = next.field.id;

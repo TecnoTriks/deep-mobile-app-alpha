@@ -56,7 +56,6 @@ function StatChip({
     <View
       className={`flex-1 items-center justify-center rounded-xl py-4 ${accent ? 'bg-primary-500' : 'bg-white'}`}
       style={{
-        elevation: accent ? 3 : 1,
         ...(ringColor ? { borderWidth: 2, borderColor: ringColor } : {}),
       }}
     >
@@ -77,7 +76,7 @@ function MetricCard({ label, value, color }: { label: string; value: number; col
   return (
     <View
       className="items-center justify-center rounded-2xl bg-white px-6 py-5"
-      style={{ elevation: 1, minWidth: 120, borderLeftWidth: 3, borderLeftColor: color }}
+      style={{ minWidth: 120, borderLeftWidth: 3, borderLeftColor: color }}
     >
       <Text className="text-3xl font-bold text-zinc-900">
         {value.toLocaleString('pt-BR')}
@@ -152,13 +151,13 @@ export function HomeScreen() {
   return (
     <ScrollView
       className="flex-1 bg-zinc-50"
-      contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
+      contentContainerStyle={{ flexGrow: 1, paddingBottom: insets.bottom + 40 }}
       showsVerticalScrollIndicator={false}
     >
 
       {/* ── 1. Cabeçalho com identidade operacional ─────────────────────── */}
       <Animated.View style={stagger.style(0)}>
-        <View className="bg-primary-500 px-5 pb-12 pt-6">
+        <View className="rounded-b-[12px] bg-primary-500 px-5 pb-12 pt-6">
           <Text
             className="text-xs font-semibold uppercase tracking-[3px] text-primary-200"
             numberOfLines={1}
@@ -194,8 +193,6 @@ export function HomeScreen() {
           </View>
         </View>
 
-        {/* curva visual */}
-        <View className="h-5 rounded-b-[20px] bg-primary-500" />
       </Animated.View>
 
       {/* ── 2. Stats rápidas (3 chips) ──────────────────────────────────── */}
@@ -210,9 +207,6 @@ export function HomeScreen() {
         <Pressable
           className="min-h-[68px] flex-row items-center justify-between rounded-2xl bg-zinc-900 px-6 active:bg-zinc-800"
           onPress={() => navigateTo('records')}
-          style={{
-            elevation: 6,
-          }}
         >
           <View>
             <Text className="text-xs font-semibold uppercase tracking-widest text-zinc-400">
@@ -276,8 +270,11 @@ export function HomeScreen() {
         </ScrollView>
       </Animated.View>
 
+      {/* ── spacer ──────────────────────────────────────────────────────── */}
+      <View className="flex-1" />
+
       {/* ── Logo ─────────────────────────────────────────────────────────── */}
-      <View className="mt-4 items-center pb-2">
+      <View className="items-center pb-2">
         <Image
           resizeMode="contain"
           source={require('../../../../assets/deep/logo.jpg')}

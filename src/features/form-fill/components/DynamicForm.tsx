@@ -16,6 +16,7 @@ import { useDynamicForm } from '../hooks/useDynamicForm';
 import { findFieldLabel } from '../utils/findFieldLabel';
 import type { FillRecordData, FillRecordLocalStatus, FormValue } from '../types/form';
 import { AlertModal } from '../../../shared/components/AlertModal';
+import { ErrorBoundary } from '../../../shared/components/ErrorBoundary';
 
 type Props = {
   data: FillRecordData;
@@ -186,24 +187,32 @@ export function DynamicForm({ data, onBack, onLocalStateSaved }: Props) {
             </View>
           </View>
 
-          {data.form.fields.map((field, index) => (
-            <DynamicFieldRenderer
-              draftScope={draftScope}
-              errors={errors}
-              field={field}
-              isLastChild={index === data.form.fields.length - 1}
-              key={field.id}
-              onChange={changeValue}
-              values={values}
-              visibility={visibility}
-            />
-          ))}
+          <ErrorBoundary
+            context={{
+              fieldsCount: data.form.fields.length,
+              formGuid: data.form.guid,
+              recordGuid: data.record.guid,
+            }}
+          >
+            {data.form.fields.map((field, index) => (
+              <DynamicFieldRenderer
+                draftScope={draftScope}
+                errors={errors}
+                field={field}
+                isLastChild={index === data.form.fields.length - 1}
+                key={field.id}
+                onChange={changeValue}
+                values={values}
+                visibility={visibility}
+              />
+            ))}
 
-          {data.form.fields.length === 0 ? (
-            <View className="rounded-2xl bg-white p-5">
-              <Text className="text-center text-sm text-zinc-500">Este formulário não possui campos configurados.</Text>
-            </View>
-          ) : null}
+            {data.form.fields.length === 0 ? (
+              <View className="rounded-2xl bg-white p-5">
+                <Text className="text-center text-sm text-zinc-500">Este formulário não possui campos configurados.</Text>
+              </View>
+            ) : null}
+          </ErrorBoundary>
 
           <View className="mt-2">
             <Pressable

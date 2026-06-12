@@ -87,6 +87,7 @@ export type SummaryData = {
   groupName: string;
   formName: string;
   recordsCount: number;
+  formBaseDados: boolean;
 };
 
 export type HomeDashboardData = {

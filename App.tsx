@@ -12,9 +12,15 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider } from './src/features/auth/context/AuthContext';
 import { AppNavigator } from './src/navigation/AppNavigator';
+import { ErrorBoundary } from './src/shared/components/ErrorBoundary';
+import { LastCrashNotice } from './src/shared/components/LastCrashNotice';
 import { migrateDatabase } from './src/shared/database/migrations';
+import { installGlobalErrorHandler } from './src/shared/diagnostics/installGlobalErrorHandler';
 import { NetworkProvider } from './src/shared/context/NetworkContext';
 import { queryClient } from './src/shared/query/queryClient';
+
+// Registra o handler global de erros fatais o mais cedo possivel, antes de qualquer render.
+installGlobalErrorHandler();
 
 // Prevent the native splash from auto-hiding — we control the timing.
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
@@ -84,19 +90,22 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <NetworkProvider>
-        <SQLiteProvider databaseName="deep-agente.db" onInit={migrateDatabase}>
-          <QueryClientProvider client={queryClient}>
-            <AuthProvider>
-              <NavigationContainer>
-                <StatusBar style="dark" />
-                <AppNavigator />
-              </NavigationContainer>
-              {!splashDone && <CustomSplash onDone={handleSplashDone} />}
-            </AuthProvider>
-          </QueryClientProvider>
-        </SQLiteProvider>
-      </NetworkProvider>
+      <ErrorBoundary>
+        <NetworkProvider>
+          <SQLiteProvider databaseName="deep-agente.db" onInit={migrateDatabase}>
+            <QueryClientProvider client={queryClient}>
+              <AuthProvider>
+                <NavigationContainer>
+                  <StatusBar style="dark" />
+                  <AppNavigator />
+                </NavigationContainer>
+                {!splashDone && <CustomSplash onDone={handleSplashDone} />}
+                <LastCrashNotice />
+              </AuthProvider>
+            </QueryClientProvider>
+          </SQLiteProvider>
+        </NetworkProvider>
+      </ErrorBoundary>
     </SafeAreaProvider>
   );
 }
