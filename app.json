@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Deep Agente Alpha",
-    "slug": "new-mobile-app",
+    "slug": "deep-agente-alpha",
     "version": "1.0.0",
     "platforms": [
       "android"
@@ -12,8 +12,8 @@
     "primaryColor": "#ef561d",
     "backgroundColor": "#fff6ed",
     "android": {
-      "package": "com.triks.deepagente",
-      "versionCode": 4,
+      "package": "com.deepagente.alpha",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#fff6ed",
         "foregroundImage": "./assets/android-icon-foreground.png",

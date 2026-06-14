@@ -25,6 +25,11 @@ export type AuthSession = {
 export type LoginInput = {
   cpf: string;
   senha: string;
+  // Expo Push Token deste dispositivo. Enviado no login para o backend persistir
+  // na coluna `mobile_app_push_code_user` do agente de campo e poder disparar push.
+  // Opcional: pode ser null quando o registro de push falha (Expo Go, sem permissao,
+  // emulador) — o login NUNCA deve ser bloqueado por isso.
+  mobile_app_push_code_user?: string | null;
 };
 
 export type LoginResponse = {

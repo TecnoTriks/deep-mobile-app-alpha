@@ -19,6 +19,7 @@ import { LastCrashNotice } from './src/shared/components/LastCrashNotice';
 import { NetworkProvider } from './src/shared/context/NetworkContext';
 import { migrateDatabase } from './src/shared/database/migrations';
 import { installGlobalErrorHandler } from './src/shared/diagnostics/installGlobalErrorHandler';
+import { configureNotificationHandling } from './src/shared/notifications/notificationService';
 import { queryClient } from './src/shared/query/queryClient';
 
 // Registra o handler global de erros fatais o mais cedo possivel, antes de qualquer render.
@@ -88,6 +89,12 @@ export default function App() {
   // Hide the native splash as soon as the JS bundle is ready.
   useEffect(() => {
     SplashScreen.hideAsync().catch(() => undefined);
+  }, []);
+
+  // Configura como as notificacoes push se comportam em foreground (banner + som).
+  // Best-effort: nao funciona no Expo Go, e a ausencia disso nao deve quebrar o app.
+  useEffect(() => {
+    configureNotificationHandling().catch(() => undefined);
   }, []);
 
   return (

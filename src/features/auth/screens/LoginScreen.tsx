@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   Image,
   KeyboardAvoidingView,
@@ -21,6 +22,7 @@ import { setApiAccessToken } from '../../../shared/api/apiClient';
 import { useAuthLayout } from '../utils/useAuthLayout';
 import { getErrorMessage } from '../../../shared/utils/getErrorMessage';
 import { formatCpf } from '../../../shared/utils/formatCpf';
+import { registerForPushNotifications } from '../../../shared/notifications/notificationService';
 
 export function LoginScreen() {
   const { contentWidth, insets } = useAuthLayout();
@@ -101,7 +103,20 @@ export function LoginScreen() {
         return;
       }
 
-      const session = await login({ cpf, senha: password });
+      // Registra o dispositivo para push e envia o Expo Push Token no login.
+      // Best-effort: se falhar (Expo Go, permissao negada, emulador), segue com
+      // null — o login nunca pode ser bloqueado pela ausencia do token.
+      let pushToken: string | null = null;
+      try {
+        pushToken = await registerForPushNotifications();
+      } catch (pushError) {
+        console.warn('[push] Nao foi possivel obter o token de push:', pushError);
+        // TEMPORARIO (debug): mostra na tela por que o token veio null.
+        // Remover apos confirmar que o push esta funcionando.
+        Alert.alert('Debug push token', getErrorMessage(pushError, 'Falha desconhecida ao registrar push.'));
+      }
+
+      const session = await login({ cpf, senha: password, mobile_app_push_code_user: pushToken });
 
       // Login returns equipe but NOT grupo. If the user has a team, fetch
       // group membership before signIn so AppNavigator has complete data.

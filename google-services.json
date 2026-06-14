@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "386853326643",
+    "project_id": "deep-agente-alpha",
+    "storage_bucket": "deep-agente-alpha.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:386853326643:android:f29f1a7161922e8e84f846",
+        "android_client_info": {
+          "package_name": "com.deepagente.alpha"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC7-GwyCGT-plk09BVsvTeV5y2Lhp_AKC8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
